@@ -179,7 +179,7 @@ export function transformAttribute(
   if (!value) {
     return value;
   }
-
+  if(value.startsWith('{{')) return value;
   // relative path in attribute
   if (
     name === 'src' ||
