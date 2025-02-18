@@ -407,6 +407,7 @@ function serializeNode(
      */
     newlyAddedElement?: boolean;
     cssCaptured?: boolean;
+    editMode?: boolean;
   },
 ): serializedNode | false {
   const {
@@ -425,9 +426,10 @@ function serializeNode(
     keepIframeSrcFn,
     newlyAddedElement = false,
     cssCaptured = false,
+    editMode = false,
   } = options;
   // Only record root id when document object is not the base document
-  const rootId = getRootId(doc, mirror);
+  const rootId = getRootId(doc, mirror, editMode);
   switch (n.nodeType) {
     case n.DOCUMENT_NODE:
       if ((n as Document).compatMode !== 'CSS1Compat') {
@@ -464,6 +466,7 @@ function serializeNode(
         keepIframeSrcFn,
         newlyAddedElement,
         rootId,
+        editMode
       });
     case n.TEXT_NODE:
       return serializeTextNode(n as Text, {
@@ -472,6 +475,7 @@ function serializeNode(
         maskTextFn,
         rootId,
         cssCaptured,
+        editMode
       });
     case n.CDATA_SECTION_NODE:
       return {
@@ -490,7 +494,8 @@ function serializeNode(
   }
 }
 
-function getRootId(doc: Document, mirror: Mirror): number | undefined {
+function getRootId(doc: Document, mirror: Mirror, editMode: boolean): number | undefined {
+  if(editMode) return undefined;
   if (!mirror.hasNode(doc)) return undefined;
   const docId = mirror.getId(doc);
   return docId === 1 ? undefined : docId;
@@ -504,9 +509,10 @@ function serializeTextNode(
     maskTextFn: MaskTextFn | undefined;
     rootId: number | undefined;
     cssCaptured?: boolean;
+    editMode?: boolean;
   },
 ): serializedNode {
-  const { needsMask, maskTextFn, rootId, cssCaptured } = options;
+  const { needsMask, maskTextFn, rootId, cssCaptured, editMode } = options;
   // The parent node may not be a html element which has a tagName attribute.
   // So just let it be undefined which is ok in this use case.
   const parent = dom.parentNode(n);
@@ -534,7 +540,7 @@ function serializeTextNode(
 
   return {
     type: NodeType.Text,
-    textContent: textContent || '',
+    textContent: editMode ? unescape(textContent || '') : textContent || '',
     rootId,
   };
 }
@@ -557,6 +563,7 @@ function serializeElementNode(
      */
     newlyAddedElement?: boolean;
     rootId: number | undefined;
+    editMode?: boolean
   },
 ): serializedNode | false {
   const {
@@ -572,6 +579,7 @@ function serializeElementNode(
     keepIframeSrcFn,
     newlyAddedElement = false,
     rootId,
+    editMode = false
   } = options;
   const needBlock = _isBlockedElement(n, blockClass, blockSelector);
   const tagName = getValidTagName(n);
@@ -604,7 +612,7 @@ function serializeElementNode(
       attributes._cssText = cssText;
     }
   }
-  if (tagName === 'style' && (n as HTMLStyleElement).sheet) {
+  if (tagName === 'style' && (n as HTMLStyleElement).sheet && !editMode) {
     let cssText = stringifyStylesheet(
       (n as HTMLStyleElement).sheet as CSSStyleSheet,
     );
@@ -931,6 +939,7 @@ export function serializeNodeWithId(
     ) => unknown;
     stylesheetLoadTimeout?: number;
     cssCaptured?: boolean;
+    editMode?: boolean;
   },
 ): serializedNodeWithId | null {
   const {
@@ -957,6 +966,7 @@ export function serializeNodeWithId(
     keepIframeSrcFn = () => false,
     newlyAddedElement = false,
     cssCaptured = false,
+    editMode = false
   } = options;
   let { needsMask } = options;
   let { preserveWhiteSpace = true } = options;
@@ -988,6 +998,7 @@ export function serializeNodeWithId(
     keepIframeSrcFn,
     newlyAddedElement,
     cssCaptured,
+    editMode
   });
   if (!_serializedNode) {
     // TODO: dev only
@@ -1068,6 +1079,7 @@ export function serializeNodeWithId(
       stylesheetLoadTimeout,
       keepIframeSrcFn,
       cssCaptured: false,
+      editMode
     };
 
     if (
@@ -1143,6 +1155,7 @@ export function serializeNodeWithId(
             onStylesheetLoad,
             stylesheetLoadTimeout,
             keepIframeSrcFn,
+            editMode: false
           });
 
           if (serializedIframeNode) {
@@ -1195,6 +1208,7 @@ export function serializeNodeWithId(
             onStylesheetLoad,
             stylesheetLoadTimeout,
             keepIframeSrcFn,
+            editMode
           });
 
           if (serializedLinkNode) {
@@ -1241,6 +1255,7 @@ function snapshot(
     ) => unknown;
     stylesheetLoadTimeout?: number;
     keepIframeSrcFn?: KeepIframeSrcFn;
+    editMode?: boolean;
   },
 ): serializedNodeWithId | null {
   const {
@@ -1264,6 +1279,7 @@ function snapshot(
     onStylesheetLoad,
     stylesheetLoadTimeout,
     keepIframeSrcFn = () => false,
+    editMode = false,
   } = options || {};
   const maskInputOptions: MaskInputOptions =
     maskAllInputs === true
@@ -1332,6 +1348,7 @@ function snapshot(
     stylesheetLoadTimeout,
     keepIframeSrcFn,
     newlyAddedElement: false,
+    editMode
   });
 }
 

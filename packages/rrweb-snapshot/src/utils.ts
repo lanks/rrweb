@@ -151,6 +151,7 @@ export function stringifyRule(rule: CSSRule, sheetHref: string | null): string {
     return importStringified;
   } else {
     let ruleStringified = rule.cssText;
+
     if (isCSSStyleRule(rule) && rule.selectorText.includes(':')) {
       // Safari does not escape selectors with : properly
       // see https://bugs.webkit.org/show_bug.cgi?id=184604
